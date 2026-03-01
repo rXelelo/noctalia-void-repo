@@ -24,21 +24,21 @@ jobs:
       - name: Setup void-packages
         run: |
           useradd -m builder
-          xbps-install -y xtools
           groupadd xbuilder || true
           usermod -aG xbuilder builder
           git clone --depth=1 https://github.com/void-linux/void-packages
           cp -r srcpkgs/* void-packages/srcpkgs/
           cat >> void-packages/etc/conf << 'EOF'
           XBPS_ALLOW_CHROOT_BREAKOUT=yes
+          XBPS_CHROOT_CMD=ethereal
           EOF
           chown -R builder:builder void-packages
           su builder -c "cd void-packages && ./xbps-src binary-bootstrap"
 
       - name: Build packages
         run: |
-          su builder -c "cd void-packages && ./xbps-src -t pkg noctalia-qs"
-          su builder -c "cd void-packages && ./xbps-src -t pkg noctalia-shell"
+          su builder -c "cd void-packages && ./xbps-src pkg noctalia-qs"
+          su builder -c "cd void-packages && ./xbps-src pkg noctalia-shell"
 
       - name: Sign and index repo
         env:

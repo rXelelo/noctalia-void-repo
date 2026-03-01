@@ -17,7 +17,7 @@ jobs:
         run: |
           xbps-install -Syu xbps
           xbps-install -yu
-          xbps-install -y git libstdc++ tar curl xtools
+          xbps-install -y git libstdc++ tar curl xtools sudo
 
       - uses: actions/checkout@v4
 
@@ -25,7 +25,8 @@ jobs:
         run: |
           useradd -m builder
           groupadd xbuilder || true
-          usermod -aG xbuilder builder
+          usermod -aG xbuilder,wheel builder
+          echo "%wheel ALL=(ALL:ALL) NOPASSWD: ALL" | tee /etc/sudoers
           git clone --depth=1 https://github.com/void-linux/void-packages /home/builder/void-packages
           cp -r srcpkgs/* /home/builder/void-packages/srcpkgs/
           chown -R builder:builder /home/builder/void-packages

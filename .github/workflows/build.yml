@@ -24,11 +24,16 @@ jobs:
       - name: Setup void-packages
         run: |
           useradd -m builder
+          xbps-install -y xtools
+          groupadd xbuilder || true
+          usermod -aG xbuilder builder
           git clone --depth=1 https://github.com/void-linux/void-packages
           cp -r srcpkgs/* void-packages/srcpkgs/
-          echo "XBPS_ALLOW_CHROOT_BREAKOUT=yes" >> void-packages/etc/conf
+          cat >> void-packages/etc/conf << 'EOF'
+          XBPS_ALLOW_CHROOT_BREAKOUT=yes
+          EOF
           chown -R builder:builder void-packages
-          su builder -c "cd void-packages && ./xbps-src -t binary-bootstrap"
+          su builder -c "cd void-packages && ./xbps-src binary-bootstrap"
 
       - name: Build packages
         run: |

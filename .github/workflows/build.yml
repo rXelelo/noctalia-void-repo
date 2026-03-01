@@ -43,10 +43,7 @@ jobs:
         run: |
           ls -la /home/builder/void-packages/masterdir/bin/xbps-shell || echo "ERROR: xbps-shell not found"
           ls -la /home/builder/void-packages/masterdir/
-          
-      - name: Build noctalia-qs
-        run: su builder -c "cd /home/builder/void-packages && ./xbps-src pkg noctalia-qs"
-
+  
       - name: Debug
         run: |
           ls -la /home/builder/void-packages/

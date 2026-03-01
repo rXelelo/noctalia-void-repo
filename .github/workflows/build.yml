@@ -50,7 +50,11 @@ jobs:
           PRIVATE_KEY: ${{ secrets.XBPS_PRIVATE_KEY }}
         run: |
           echo "$PRIVATE_KEY" > /tmp/privkey.pem
-          chmod 600 /tmp/privkey.pem
+          # debug what we got
+          head -1 /tmp/privkey.pem
+          wc -l /tmp/privkey.pem
+          file /tmp/privkey.pem
+          openssl rsa -in /tmp/privkey.pem -check -noout 2>&1 || true
           xbps-rindex -a void-packages/hostdir/binpkgs/*.xbps
           xbps-rindex --sign --signedby "Rain Xelelo" \
             --privkey /tmp/privkey.pem void-packages/hostdir/binpkgs

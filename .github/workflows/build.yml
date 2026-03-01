@@ -12,6 +12,12 @@ jobs:
       image: ghcr.io/void-linux/void-linux:latest-full-x86_64
 
     steps:
+      - name: Install base dependencies
+        run: |
+          xbps-install -Syu xbps
+          xbps-install -yu
+          xbps-install -y git libstdc++ tar curl
+          
       - uses: actions/checkout@v4
 
       - name: Setup void-packages

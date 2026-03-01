@@ -26,13 +26,14 @@ jobs:
           useradd -m builder
           git clone --depth=1 https://github.com/void-linux/void-packages
           cp -r srcpkgs/* void-packages/srcpkgs/
+          echo "XBPS_ALLOW_CHROOT_BREAKOUT=yes" >> void-packages/etc/conf
           chown -R builder:builder void-packages
-          su builder -c "cd void-packages && ./xbps-src binary-bootstrap"
+          su builder -c "cd void-packages && ./xbps-src -t binary-bootstrap"
 
       - name: Build packages
         run: |
-          su builder -c "cd void-packages && ./xbps-src pkg noctalia-qs"
-          su builder -c "cd void-packages && ./xbps-src pkg noctalia-shell"
+          su builder -c "cd void-packages && ./xbps-src -t pkg noctalia-qs"
+          su builder -c "cd void-packages && ./xbps-src -t pkg noctalia-shell"
 
       - name: Sign and index repo
         env:

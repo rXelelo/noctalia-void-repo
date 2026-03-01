@@ -35,10 +35,14 @@ jobs:
           chown -R builder:builder /home/builder/void-packages
           su builder -c "cd /home/builder/void-packages && ./xbps-src binary-bootstrap"
 
-      - name: Build packages
+      - name: Setup and build
         run: |
-          su builder -c "cd /home/builder/void-packages && ./xbps-src pkg noctalia-qs"
-          su builder -c "cd /home/builder/void-packages && ./xbps-src pkg noctalia-shell"
+          su builder -c "
+            cd /home/builder/void-packages
+            ./xbps-src binary-bootstrap && echo 'Bootstrap OK' || { echo 'Bootstrap FAILED'; exit 1; }
+            ./xbps-src pkg noctalia-qs
+            ./xbps-src pkg noctalia-shell
+          "
 
       - name: Sign and index repo
         run: |

@@ -28,19 +28,19 @@ jobs:
           usermod -aG xbuilder builder
           git clone --depth=1 https://github.com/void-linux/void-packages /home/builder/void-packages
           cp -r srcpkgs/* /home/builder/void-packages/srcpkgs/
+          chown -R builder:builder /home/builder/void-packages
           su - builder -c "/home/builder/void-packages/xbps-src binary-bootstrap"
           cat >> /home/builder/void-packages/etc/conf << 'EOF'
           XBPS_ALLOW_CHROOT_BREAKOUT=yes
           XBPS_CHROOT_CMD=ethereal
-          XBPS_MASTERDIR=/home/builder/void-packages/masterdir
+          XBPS_MASTERDIR=/home/builder/void-packages/masterdir-x86_64
           EOF
-          chown -R builder:builder /home/builder/void-packages
   
       - name: Debug
         run: |
           ls -la /home/builder/void-packages/
-          ls -la /home/builder/void-packages/masterdir/
-          cat /home/builder/void-packages/masterdir/.xbps_chroot_init 2>/dev/null || echo "no init file"
+          ls -la /home/builder/void-packages/masterdir-x86_64/
+          cat /home/builder/void-packages/masterdir-x86_64/.xbps_chroot_init 2>/dev/null || echo "no init file"
 
       - name: Build noctalia-qs
         run: su builder -c "cd /home/builder/void-packages && ./xbps-src pkg noctalia-qs"

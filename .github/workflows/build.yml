@@ -1,0 +1,42 @@
+name: Build and publish packages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/void-linux/void-linux:latest-full-x86_64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup void-packages
+        run: |
+          git clone --depth=1 https://github.com/void-linux/void-packages
+          cp -r srcpkgs/* void-packages/srcpkgs/
+          cd void-packages
+          ./xbps-src binary-bootstrap
+
+      - name: Build packages
+        run: |
+          cd void-packages
+          ./xbps-src pkg noctalia-qs
+          ./xbps-src pkg noctalia-shell
+
+      - name: Sign and index repo
+        run: |
+          cd void-packages
+          xbps-rindex -a hostdir/binpkgs/*.xbps
+          # sign with your private key
+          xbps-rindex --sign --signedby "Rain Xelelo" \
+            --privkey privkey.pem hostdir/binpkgs
+
+      - name: Publish to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: void-packages/hostdir/binpkgs

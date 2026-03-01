@@ -1,0 +1,69 @@
+# Template file for 'noctalia-qs'
+pkgname=noctalia-qs
+version=0.0.4
+revision=3
+short_desc="Custom fork of Quickshell powering Noctalia Shell"
+maintainer="Rain Xelelo <rXelelo@outlook.com>"
+license="LGPL-3.0-only"
+homepage="https://github.com/noctalia-dev/noctalia-qs"
+distfiles="$homepage/archive/v${version}.tar.gz"
+checksum=4aee2264b4165dfd99278a545d51d4637da4aca6db3e57443d9320685cb0f749
+
+build_style=cmake
+
+configure_args="
+ -DCMAKE_BUILD_TYPE=Release
+ -DDISTRIBUTOR='Void Linux'
+ -DDISTRIBUTOR_DEBUGINFO_AVAILABLE=Yes
+ -DCRASH_REPORTER=Off
+ -DINSTALL_QML_PREFIX=lib/qt6/qml
+"
+
+archs="x86_64 aarch64"
+
+hostmakedepends="
+ cmake
+ ninja
+ qt6-shadertools
+ SPIRV-Tools
+ wayland-protocols
+ git
+ Vulkan-Headers
+ cli11
+"
+
+makedepends="
+ pkg-config
+ qt6-base-devel
+ qt6-declarative-devel
+ qt6-svg-devel
+ qt6-wayland-devel
+ qt6-shadertools-devel
+ qt6-quick3d-private-devel
+ wayland-devel
+ libxcb-devel
+ libdrm-devel
+ libglvnd-devel
+ pipewire-devel
+ pam-devel
+ jemalloc-devel
+ polkit-devel
+"
+
+depends="
+ hicolor-icon-theme
+ jemalloc
+ libdrm
+ libglvnd
+ libxcb
+ mesa
+ pam
+ polkit
+ wayland
+"
+
+conflicts="quickshell"
+
+post_install() {
+ vlicense LICENSE
+}

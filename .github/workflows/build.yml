@@ -49,16 +49,14 @@ jobs:
         env:
           PRIVATE_KEY: ${{ secrets.XBPS_PRIVATE_KEY }}
         run: |
+          xbps-install -y openssl
           echo "$PRIVATE_KEY" > /tmp/privkey.pem
-          # debug what we got
-          head -1 /tmp/privkey.pem
-          wc -l /tmp/privkey.pem
-          file /tmp/privkey.pem
-          openssl rsa -in /tmp/privkey.pem -check -noout 2>&1 || true
+          # convert to traditional RSA format just in case
+          openssl rsa -in /tmp/privkey.pem -out /tmp/privkey_rsa.pem
           xbps-rindex -a void-packages/hostdir/binpkgs/*.xbps
           xbps-rindex --sign --signedby "Rain Xelelo" \
-            --privkey /tmp/privkey.pem void-packages/hostdir/binpkgs
-          rm /tmp/privkey.pem
+            --privkey /tmp/privkey_rsa.pem void-packages/hostdir/binpkgs
+          rm /tmp/privkey.pem /tmp/privkey_rsa.pem
 
       - name: Publish to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3

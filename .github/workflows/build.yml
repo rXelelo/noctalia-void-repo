@@ -26,34 +26,31 @@ jobs:
           useradd -m builder
           groupadd xbuilder || true
           usermod -aG xbuilder builder
-          git clone --depth=1 https://github.com/void-linux/void-packages
-          cp -r srcpkgs/* void-packages/srcpkgs/
-          cat >> void-packages/etc/conf << 'EOF'
+          git clone --depth=1 https://github.com/void-linux/void-packages /home/builder/void-packages
+          cp -r srcpkgs/* /home/builder/void-packages/srcpkgs/
+          cat >> /home/builder/void-packages/etc/conf << 'EOF'
           XBPS_ALLOW_CHROOT_BREAKOUT=yes
           XBPS_CHROOT_CMD=ethereal
           EOF
-          chown -R builder:builder void-packages
-          su builder -c "cd void-packages && ./xbps-src binary-bootstrap"
+          chown -R builder:builder /home/builder/void-packages
+          su builder -c "cd /home/builder/void-packages && ./xbps-src binary-bootstrap"
 
       - name: Build packages
         run: |
-          su builder -c "cd void-packages && ./xbps-src pkg noctalia-qs"
-          su builder -c "cd void-packages && ./xbps-src pkg noctalia-shell"
+          su builder -c "cd /home/builder/void-packages && ./xbps-src pkg noctalia-qs"
+          su builder -c "cd /home/builder/void-packages && ./xbps-src pkg noctalia-shell"
 
       - name: Sign and index repo
-        env:
-          PRIVATE_KEY: ${{ secrets.XBPS_PRIVATE_KEY }}
         run: |
-          echo "$PRIVATE_KEY" > /tmp/privkey.pem
+          echo "${{ secrets.XBPS_PRIVATE_KEY }}" > /tmp/privkey.pem
           chmod 600 /tmp/privkey.pem
-          cd void-packages
-          xbps-rindex -a hostdir/binpkgs/*.xbps
+          xbps-rindex -a /home/builder/void-packages/hostdir/binpkgs/*.xbps
           xbps-rindex --sign --signedby "Rain Xelelo" \
-            --privkey /tmp/privkey.pem hostdir/binpkgs
+            --privkey /tmp/privkey.pem /home/builder/void-packages/hostdir/binpkgs
           rm /tmp/privkey.pem
 
       - name: Publish to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: void-packages/hostdir/binpkgs
+          publish_dir: /home/builder/void-packages/hostdir/binpkgs

@@ -13,7 +13,7 @@ echo "repository=https://rxelelo.github.io/noctalia-void-repo" \
   | sudo tee /etc/xbps.d/noctalia.conf
 ```
 
-2. Sync and verify
+### 2. Sync and verify
 
 ```bash
 sudo xbps-install -S

@@ -77,7 +77,7 @@ This will update all packages including ones from this repository.
 
 ```bash
 sudo rm /etc/xbps.d/noctalia.conf
-sudo rm /var/db/xbps/keys/noctalia.pem
+sudo rm /var/db/xbps/keys/f9:75:69:31:bd:ee:dd:5e:d7:48:97:7f:4b:f1:0f:72.plist
 sudo xbps-install -S
 ```
 

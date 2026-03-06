@@ -160,8 +160,18 @@ jobs:
           echo XBPS_CHROOT_CMD=uchroot >> etc/conf
           echo XBPS_ALLOW_RESTRICTED=yes >> etc/conf
           sudo -Eu builder ./xbps-src binary-bootstrap
-          echo "repository=https://rxelelo.github.io/noctalia-void-repo" > masterdir-x86_64/etc/xbps.d/10-noctalia.conf
-          sudo -Eu builder ./xbps-src bootstrap-update
+          echo "<?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version=\"1.0\">
+          <dict>
+            <key>public-key</key>
+            <data>LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQ0lqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FnOEFNSUlDQ2dLQ0FnRUE2YTl1emdoRXYzajBCVmtBYTlWcgpqeC9UOGZtS2tvTXQvc0c2TTNGS2lNRUZ6RGlXNlh6QWwyNDY2SjNPbXQ1RnRzRXEwZWtvMTljTjBqdW9kMnh6CldST1hIbzdkdUh1UElBbExtM2p5Qy9kLzA2UDNmT0hKRFRkbFlldC9wUmRVMEtRZGRzU0x6Vzh2UVgwdkZFNXcKZ2hGSnpyT3hHOUJLcnRpV05HdmVWUXRJOGNWZWgxWnJ6NDVCQjlUelNIS3pQUGVQc3FWSVlrdjRMaWVpdVU1RQpLNGdDUlpxdGJ3VHRkK0tLbjFNVWNLY3lOZEllNFNQdVBRRWRpei9HUzdRQkNhTlRRUjNndStLcHQ2djVVMjB3CmhlcS91czVoY3g4bHlPeVBDNmlyQThwd2Z3V3VaM2ZZaExzcDJVRm83aG9rWFArN1A5eHp4OGRxMFNNYzBIK3AKODhnSDkzK0paTHFzd0lZNEpDMVZ0THNYQ1g0SU1YZXBQSU9rbzMyVlVMSWZhWVlDMS9HTjRGaXJYWDFvSGlxOQpLVFU3alFsaHUxbm8reTI1UWRWMWFuY1U3UHdCam5FYlRjZ2FEN1ZLanVRckhSS2hidEFjR21kSTUrWnZJYXYvCmcybHd3VXk4K3hqbm9vdlVUTk5nUk1hZEVIWk8xTCt5UFM4OWlYZUcvdU43M05HYlk0TkljU2FaQ1RsTVFZK3kKVmlBMkY5V21xUDJYWUtIbG5QWC9TbnFjaTdqNWRyMTdUTGtjZTBqZFI4b2hKRG5LU0dzMUxNVFlsMmVyZ1R6RgpHSVVvbmlwMEtzMys3SXRSYnNkTExWM2IrVDVGNGZpRU8rNXdYVitjREFVNDMzRS9RR2JOcVFyeDNIanhLSVdYCjAyc2tvUmZVdVpsMlVScXlLay9lNVhrQ0F3RUFBUT09Ci0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQo=</data>
+            <key>public-key-size</key>
+            <integer>4096</integer>
+            <key>signature-by</key>
+            <string>Rain Xelelo</string>
+          </dict>
+          </plist>" > masterdir-x86_64/var/db/xbps/keys/f9:75:69:31:bd:ee:dd:5e:d7:48:97:7f:4b:f1:0f:72.plist
           sudo -Eu builder xbps-install -r masterdir-x86_64 --repo=https://rxelelo.github.io/noctalia-void-repo jq curl noctalia-qs -y
 
       - name: Build changed package

@@ -1,6 +1,6 @@
 # Template file for 'noctalia-shell-git'
 pkgname=noctalia-shell-git
-version=4.6.3
+version=git
 revision=1
 short_desc="A sleek and minimal desktop shell thoughtfully crafted for Wayland, built with Quickshell. (git)"
 maintainer="Rain Xelelo <rXelelo@outlook.com>"
@@ -26,6 +26,9 @@ depends="
 
 do_fetch() {
  git clone --depth=1 --branch "${_gitbranch}" "${_giturl}" "${XBPS_BUILDDIR}/${pkgname}"
+ cd "${XBPS_BUILDDIR}/${pkgname}"
+ _commit=$(git rev-parse --short HEAD)
+ version="${version}.${_commit}"
 }
 
 do_install() {

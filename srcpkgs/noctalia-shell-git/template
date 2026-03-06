@@ -1,0 +1,37 @@
+# Template file for 'noctalia-shell-git'
+pkgname=noctalia-shell-git
+version=4.6.3
+revision=1
+short_desc="A sleek and minimal desktop shell thoughtfully crafted for Wayland, built with Quickshell. (git)"
+maintainer="Rain Xelelo <rXelelo@outlook.com>"
+license="MIT"
+homepage="https://github.com/noctalia-dev/noctalia-shell"
+_giturl="$homepage.git"
+_gitbranch="main"
+hostmakedepends="git"
+depends="
+ noctalia-qs
+ ImageMagick
+ brightnessctl
+ ffmpeg
+ qt6-multimedia
+ python3
+"
+# optdepends isn't a thing in Void, so we note them here for reference:
+# cliphist: clipboard history support
+# cava: audio visualizer component
+# wlsunset: NightLight support
+# power-profiles-daemon: power profile management
+# ddcutil: external display brightness control
+
+do_fetch() {
+ git clone --depth=1 --branch "${_gitbranch}" "${_giturl}" "${XBPS_BUILDDIR}/${pkgname}"
+}
+
+do_install() {
+ vmkdir etc/xdg/quickshell/noctalia-shell
+ for f in *; do
+  [ "$f" = ".git" ] && continue
+  vcopy "$f" etc/xdg/quickshell/noctalia-shell/
+ done
+}

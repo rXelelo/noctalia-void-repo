@@ -3,9 +3,9 @@ on:
   push:
     branches: [main]
     paths:
-      - 'srcpkgs/**'
+      - "srcpkgs/**"
   schedule:
-    - cron: '0 6 * * *'  # Daily at 6am UTC
+    - cron: "0 */2 * * *"
   workflow_dispatch:
 
 jobs:

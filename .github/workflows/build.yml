@@ -5,7 +5,7 @@ on:
     paths:
       - 'srcpkgs/**'
   schedule:
-    - cron: '0 6 * * *'  # Daily at 6am UTC
+    - cron: '0 */4 * * *'  # Daily at 6am UTC
   workflow_dispatch:
 
 jobs:

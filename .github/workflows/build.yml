@@ -186,7 +186,7 @@ jobs:
 
       - name: Install rclone
         run: |
-          curl https://rclone.org/install.sh | bash
+           xbps-install -y rclone
 
       - name: Configure rclone for Storj
         run: |

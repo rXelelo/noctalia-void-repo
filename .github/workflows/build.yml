@@ -174,7 +174,7 @@ jobs:
             <string>Rain Xelelo</string>
           </dict>
           </plist>" > masterdir-x86_64/var/db/xbps/keys/f9:75:69:31:bd:ee:dd:5e:d7:48:97:7f:4b:f1:0f:72.plist
-          sudo -Eu builder xbps-install -r masterdir-x86_64 --repo=https://rxelelo.github.io/noctalia-void-repo -S jq curl noctalia-qs -y
+          sudo -Eu builder xbps-install -r masterdir-x86_64 --repo=https://rxelelo.github.io/void-repo -S jq curl noctalia-qs -y
 
       - name: Build changed package
         run: |
@@ -202,7 +202,7 @@ jobs:
 
       - name: Merge with existing repo and clean old versions
         run: |
-          REPO_DIR="/__w/noctalia-void-repo/noctalia-void-repo/repo"
+          REPO_DIR="/__w/void-repo/void-repo/repo"
           mkdir -p $REPO_DIR
 
           # Fetch existing gh-pages packages

@@ -172,7 +172,7 @@ jobs:
             <string>Rain Xelelo</string>
           </dict>
           </plist>" > masterdir-x86_64/var/db/xbps/keys/f9:75:69:31:bd:ee:dd:5e:d7:48:97:7f:4b:f1:0f:72.plist
-          sudo -Eu builder xbps-install -r masterdir-x86_64 --repo=https://rxelelo.github.io/void-repo -S jq curl noctalia-qs -y
+          sudo -Eu builder xbps-install -r masterdir-x86_64 --repo=https://${{ secrets.CODEBERG_USER }}.codeberg.page/${{ secrets.CODEBERG_REPO }} -S jq curl noctalia-qs -y
 
       - name: Build changed packages
         run: |
@@ -184,40 +184,23 @@ jobs:
           echo "=> Built packages:"
           cat /tmp/latest.list
 
-      - name: Install rclone
+      - name: Clone Codeberg pages repo
         run: |
-           xbps-install -y rclone
+          git clone --depth=1 \
+            https://oauth2:${{ secrets.CODEBERG_TOKEN }}@codeberg.org/${{ secrets.CODEBERG_USER }}/${{ secrets.CODEBERG_REPO }}.git \
+            /tmp/codeberg-repo
+          cd /tmp/codeberg-repo
+          git checkout pages 2>/dev/null || git checkout --orphan pages
 
-      - name: Configure rclone for Storj
+      - name: Merge new packages into repo
         run: |
-          mkdir -p ~/.config/rclone
-          cat > ~/.config/rclone/rclone.conf << EOF
-          [storj]
-          type = s3
-          provider = Other
-          access_key_id = ${{ secrets.S3_ACCESS_KEY_ID }}
-          secret_access_key = ${{ secrets.S3_SECRET_ACCESS_KEY }}
-          endpoint = https://gateway.storjshare.io
-          acl = public-read
-          EOF
+          REPO_DIR=/tmp/codeberg-repo
 
-      - name: Download existing repo from Storj
-        run: |
-          mkdir -p $GITHUB_WORKSPACE/repo
-          rclone copy storj:${{ secrets.S3_BUCKET_NAME }} $GITHUB_WORKSPACE/repo/ || true
-          echo "=> Existing packages in repo:"
-          ls $GITHUB_WORKSPACE/repo/*.xbps 2>/dev/null | wc -l || echo "0 packages"
+          # Copy newly built packages
+          cp void-packages/hostdir/binpkgs/*.xbps $REPO_DIR/
+          cp void-packages/hostdir/binpkgs/*.sig2 $REPO_DIR/ 2>/dev/null || true
 
-      - name: Merge, sign and index repo
-        run: |
-          echo "${{ secrets.XBPS_PRIVATE_KEY }}" > /tmp/privkey.pem
-          openssl rsa -in /tmp/privkey.pem -out /tmp/privkey_rsa.pem
-
-          # Copy newly built packages into repo
-          cp void-packages/hostdir/binpkgs/*.xbps $GITHUB_WORKSPACE/repo/
-          cp void-packages/hostdir/binpkgs/*.sig2 $GITHUB_WORKSPACE/repo/ 2>/dev/null || true
-
-          cd $GITHUB_WORKSPACE/repo
+          cd $REPO_DIR
 
           # Remove old versions of newly built packages
           while read newly_built; do
@@ -230,7 +213,14 @@ jobs:
             done
           done < /tmp/latest.list
 
-          # Sign all packages and re-index
+          echo "=> Final package count: $(ls *.xbps 2>/dev/null | wc -l)"
+
+      - name: Sign and re-index repo
+        run: |
+          echo "${{ secrets.XBPS_PRIVATE_KEY }}" > /tmp/privkey.pem
+          openssl rsa -in /tmp/privkey.pem -out /tmp/privkey_rsa.pem
+
+          cd /tmp/codeberg-repo
           xbps-rindex --sign-pkg --signedby "Rain Xelelo" \
             --privkey /tmp/privkey_rsa.pem *.xbps
           xbps-rindex -a *.xbps
@@ -239,13 +229,9 @@ jobs:
 
           rm /tmp/privkey.pem /tmp/privkey_rsa.pem
 
-          echo "=> Final repo contents:"
-          ls *.xbps | wc -l
-          echo "packages total"
-
       - name: Generate index.html
         run: |
-          REPO_DIR=$GITHUB_WORKSPACE/repo
+          REPO_DIR=/tmp/codeberg-repo
           cat > "$REPO_DIR/index.html" << 'EOF'
           <!DOCTYPE html>
           <html lang="en">
@@ -285,8 +271,11 @@ jobs:
           </html>
           EOF
 
-      - name: Upload to Storj
+      - name: Push to Codeberg pages branch
         run: |
-          rclone sync $GITHUB_WORKSPACE/repo/ storj:${{ secrets.S3_BUCKET_NAME }} \
-            --progress \
-            --transfers 10
+          cd /tmp/codeberg-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "repo: update packages $(date '+%Y-%m-%d %H:%M:%S')" || echo "Nothing to commit"
+          git push origin pages

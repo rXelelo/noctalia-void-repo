@@ -5,7 +5,7 @@ on:
     paths:
       - 'srcpkgs/**'
   schedule:
-    - cron: '0 */4 * * *'  # Daily at 6am UTC
+    - cron: '0 */4 * * *'
   workflow_dispatch:
 
 jobs:
@@ -138,8 +138,6 @@ jobs:
           elif [ -n "${{ needs.update.outputs.updated_packages }}" ]; then
             echo "packages=${{ needs.update.outputs.updated_packages }}" >> $GITHUB_OUTPUT
           else
-            # Use HEAD^ HEAD to only diff the single latest commit,
-            # avoiding false positives from older commits in the push range.
             CHANGED=$(git diff --name-only HEAD^ HEAD \
               | grep '^srcpkgs/' \
               | cut -d'/' -f2 \
@@ -176,44 +174,52 @@ jobs:
           </plist>" > masterdir-x86_64/var/db/xbps/keys/f9:75:69:31:bd:ee:dd:5e:d7:48:97:7f:4b:f1:0f:72.plist
           sudo -Eu builder xbps-install -r masterdir-x86_64 --repo=https://rxelelo.github.io/void-repo -S jq curl noctalia-qs -y
 
-      - name: Build changed package
+      - name: Build changed packages
         run: |
           for pkg in ${{ steps.changed.outputs.packages }}; do
             echo "=> Building $pkg"
             sudo -Eu builder sh -c "cd void-packages && ./xbps-src -E pkg $pkg"
           done
-          # Record exactly what was just built (used by cleanup step)
           ls void-packages/hostdir/binpkgs/*.xbps | xargs -n1 basename > /tmp/latest.list
           echo "=> Built packages:"
           cat /tmp/latest.list
 
-      - name: Sign and index repo
+      - name: Install rclone
+        run: |
+          curl https://rclone.org/install.sh | bash
+
+      - name: Configure rclone for Storj
+        run: |
+          mkdir -p ~/.config/rclone
+          cat > ~/.config/rclone/rclone.conf << EOF
+          [storj]
+          type = s3
+          provider = Other
+          access_key_id = ${{ secrets.S3_ACCESS_KEY_ID }}
+          secret_access_key = ${{ secrets.S3_SECRET_ACCESS_KEY }}
+          endpoint = https://gateway.storjshare.io
+          acl = public-read
+          EOF
+
+      - name: Download existing repo from Storj
+        run: |
+          mkdir -p $GITHUB_WORKSPACE/repo
+          rclone copy storj:${{ secrets.S3_BUCKET_NAME }} $GITHUB_WORKSPACE/repo/ || true
+          echo "=> Existing packages in repo:"
+          ls $GITHUB_WORKSPACE/repo/*.xbps 2>/dev/null | wc -l || echo "0 packages"
+
+      - name: Merge, sign and index repo
         run: |
           echo "${{ secrets.XBPS_PRIVATE_KEY }}" > /tmp/privkey.pem
           openssl rsa -in /tmp/privkey.pem -out /tmp/privkey_rsa.pem
-          xbps-rindex --sign-pkg --signedby "Rain Xelelo" \
-            --privkey /tmp/privkey_rsa.pem void-packages/hostdir/binpkgs/*.xbps
-          xbps-rindex -a void-packages/hostdir/binpkgs/*.xbps
-          xbps-rindex --sign --signedby "Rain Xelelo" \
-            --privkey /tmp/privkey_rsa.pem void-packages/hostdir/binpkgs
-          rm /tmp/privkey.pem /tmp/privkey_rsa.pem
-          mkdir -p $GITHUB_WORKSPACE/repo
-          cp void-packages/hostdir/binpkgs/* $GITHUB_WORKSPACE/repo/
 
-      - name: Merge with existing repo and clean old versions
-        run: |
-          REPO_DIR="/__w/void-repo/void-repo/repo"
-          mkdir -p $REPO_DIR
+          # Copy newly built packages into repo
+          cp void-packages/hostdir/binpkgs/*.xbps $GITHUB_WORKSPACE/repo/
+          cp void-packages/hostdir/binpkgs/*.sig2 $GITHUB_WORKSPACE/repo/ 2>/dev/null || true
 
-          # Fetch existing gh-pages packages
-          git fetch origin gh-pages 2>/dev/null || true
-          mkdir -p /tmp/existing-repo
-          git --work-tree=/tmp/existing-repo checkout origin/gh-pages -- . 2>/dev/null || true
-          cp /tmp/existing-repo/*.xbps $REPO_DIR/ 2>/dev/null || true
-          cp /tmp/existing-repo/*.sig2 $REPO_DIR/ 2>/dev/null || true
+          cd $GITHUB_WORKSPACE/repo
 
-          # Remove old versions of anything we just built
-          cd $REPO_DIR
+          # Remove old versions of newly built packages
           while read newly_built; do
             pkg_base=$(echo "$newly_built" | sed 's/-[0-9].*//')
             echo "=> Cleaning old versions of: $pkg_base"
@@ -224,19 +230,28 @@ jobs:
             done
           done < /tmp/latest.list
 
-          # Re-index
-          echo "${{ secrets.XBPS_PRIVATE_KEY }}" > /tmp/privkey.pem
-          openssl rsa -in /tmp/privkey.pem -out /tmp/privkey_rsa.pem
+          # Sign all packages and re-index
+          xbps-rindex --sign-pkg --signedby "Rain Xelelo" \
+            --privkey /tmp/privkey_rsa.pem *.xbps
           xbps-rindex -a *.xbps
           xbps-rindex --sign --signedby "Rain Xelelo" \
             --privkey /tmp/privkey_rsa.pem .
+
           rm /tmp/privkey.pem /tmp/privkey_rsa.pem
+
+          echo "=> Final repo contents:"
+          ls *.xbps | wc -l
+          echo "packages total"
+
+      - name: Generate index.html
+        run: |
+          REPO_DIR=$GITHUB_WORKSPACE/repo
           cat > "$REPO_DIR/index.html" << 'EOF'
           <!DOCTYPE html>
           <html lang="en">
           <head>
             <meta charset="UTF-8">
-            <title>Index of /</title>
+            <title>void-repo</title>
             <style>
               body { font-family: monospace; background: #fff; color: #000; margin: 20px; }
               h1 { font-size: 1.2em; }
@@ -249,12 +264,12 @@ jobs:
             </style>
           </head>
           <body>
-          <h1>Index of /</h1>
+          <h1>void-repo packages</h1>
           <hr>
           <table>
             <tr><td><a href="../">../</a></td><td></td><td>-</td></tr>
           EOF
-          
+
           for f in "$REPO_DIR"/*.xbps; do
             [ -f "$f" ] || continue
             fname=$(basename "$f")
@@ -270,9 +285,8 @@ jobs:
           </html>
           EOF
 
-      - name: Publish to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./repo
-          keep_files: false
+      - name: Upload to Storj
+        run: |
+          rclone sync $GITHUB_WORKSPACE/repo/ storj:${{ secrets.S3_BUCKET_NAME }} \
+            --progress \
+            --transfers 10

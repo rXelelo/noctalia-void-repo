@@ -1,7 +1,7 @@
 # Template file for 'vs-launcher'
 pkgname=vs-launcher
 version=1.5.8
-revision=0
+revision=1
 short_desc="Unofficial launcher and version manager for Vintage Story"
 maintainer="Rain Xelelo <rXelelo@outlook.com>"
 license="custom:vs-launcher"

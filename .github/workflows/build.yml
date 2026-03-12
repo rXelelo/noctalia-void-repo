@@ -259,13 +259,13 @@ jobs:
             </style>
           </head>
           <body>
-          <h1>void-repo packages</h1>
+          <h1>Index /</h1>
           <hr>
           <table>
             <tr><td><a href="../">../</a></td><td></td><td>-</td></tr>
           EOF
 
-          for f in "$REPO_DIR"/*.xbps; do
+          for f in "$REPO_DIR"/*; do
             [ -f "$f" ] || continue
             fname=$(basename "$f")
             fdate=$(date -r "$f" "+%d-%b-%Y %H:%M")

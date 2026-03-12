@@ -172,7 +172,7 @@ jobs:
             <string>Rain Xelelo</string>
           </dict>
           </plist>" > masterdir-x86_64/var/db/xbps/keys/f9:75:69:31:bd:ee:dd:5e:d7:48:97:7f:4b:f1:0f:72.plist
-          sudo -Eu builder xbps-install -r masterdir-x86_64 -S jq curl -y
+          sudo -Eu builder xbps-install -r masterdir-x86_64 --repo=https://${{ secrets.CODEBERG_USER }}.codeberg.page/${{ secrets.CODEBERG_REPO }} -S jq curl noctalia-qs -y
 
       - name: Build changed packages
         run: |
@@ -186,11 +186,20 @@ jobs:
 
       - name: Clone Codeberg pages repo
         run: |
-          git clone --depth=1 \
+          # Try to clone pages branch directly
+          if git clone --depth=1 --branch pages \
             https://oauth2:${{ secrets.CODEBERG_TOKEN }}@codeberg.org/${{ secrets.CODEBERG_USER }}/${{ secrets.CODEBERG_REPO }}.git \
-            /tmp/codeberg-repo
-          cd /tmp/codeberg-repo
-          git checkout pages 2>/dev/null || git checkout --orphan pages
+            /tmp/codeberg-repo; then
+            echo "=> Cloned pages branch successfully"
+            rm -f /tmp/codeberg-repo/read
+          else
+            echo "=> pages branch clone failed, initializing fresh"
+            mkdir -p /tmp/codeberg-repo
+            cd /tmp/codeberg-repo
+            git init
+            git remote add origin https://oauth2:${{ secrets.CODEBERG_TOKEN }}@codeberg.org/${{ secrets.CODEBERG_USER }}/${{ secrets.CODEBERG_REPO }}.git
+            git checkout --orphan pages
+          fi
 
       - name: Merge new packages into repo
         run: |
@@ -250,7 +259,7 @@ jobs:
             </style>
           </head>
           <body>
-          <h1>Index /</h1>
+          <h1>void-repo packages</h1>
           <hr>
           <table>
             <tr><td><a href="../">../</a></td><td></td><td>-</td></tr>
@@ -278,4 +287,4 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -A
           git commit -m "repo: update packages $(date '+%Y-%m-%d %H:%M:%S')" || echo "Nothing to commit"
-          git push -f origin pages
+          git push --force origin pages

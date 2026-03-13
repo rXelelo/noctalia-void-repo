@@ -229,6 +229,7 @@ jobs:
           openssl rsa -in /tmp/privkey.pem -out /tmp/privkey_rsa.pem
 
           cd /tmp/codeberg-repo
+          rm *.xbps.sig2
           xbps-rindex --sign-pkg --signedby "Rain Xelelo" \
             --privkey /tmp/privkey_rsa.pem *.xbps
           xbps-rindex -a *.xbps

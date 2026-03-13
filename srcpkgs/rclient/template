@@ -8,7 +8,7 @@ maintainer="Rain Xelelo <rxelelo@outlook.com>"
 license="custom"
 homepage="https://rushie-client.ru/"
 distfiles="https://github.com/RushieClient/RushieClient-ddnet/releases/download/V${version}/RClient-ubuntu.tar.xz"
-checksum=a24a16cf89fa0e106c9f16eecb21b615abb73694d56bed4db1d8b5900735d3da
+checksum=16b797562fbdb08b35a66339819029cadaa8bdbc3da1b790baec9f9fed3065a8
 
 depends="freetype opusfile curl glew wavpack ffmpeg libnotify miniupnpc sqlite libmariadbclient vulkan-loader"
 

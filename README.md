@@ -10,7 +10,7 @@ A custom XBPS repository for Void Linux.
 
 ```bash
 echo "repository=https://void-repo.r1xelelo.workers.dev" \
-  | sudo tee /etc/xbps.d/noctalia.conf
+  | sudo tee /etc/xbps.d/void-repo.r1xelelo.conf
 ```
 
 ### 2. Sync and verify
@@ -56,7 +56,7 @@ This will update all packages including ones from this repository.
 ## Removing the Repository
 
 ```bash
-sudo rm /etc/xbps.d/noctalia.conf
+sudo rm /etc/xbps.d/void-repo.r1xelelo.conf
 sudo rm /var/db/xbps/keys/f9:75:69:31:bd:ee:dd:5e:d7:48:97:7f:4b:f1:0f:72.plist
 sudo xbps-install -S
 ```

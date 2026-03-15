@@ -1,5 +1,7 @@
 name: Build Git and publish
 on:
+  schedule:
+    - cron: '0 */2 * * *'
   workflow_dispatch:
 
 jobs:
@@ -57,19 +59,7 @@ jobs:
           echo XBPS_CHROOT_CMD=uchroot >> etc/conf
           echo XBPS_ALLOW_RESTRICTED=yes >> etc/conf
           sudo -Eu builder ./xbps-src binary-bootstrap
-          echo "<?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version=\"1.0\">
-          <dict>
-            <key>public-key</key>
-            <data>LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQ0lqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FnOEFNSUlDQ2dLQ0FnRUE2YTl1emdoRXYzajBCVmtBYTlWcgpqeC9UOGZtS2tvTXQvc0c2TTNGS2lNRUZ6RGlXNlh6QWwyNDY2SjNPbXQ1RnRzRXEwZWtvMTljTjBqdW9kMnh6CldST1hIbzdkdUh1UElBbExtM2p5Qy9kLzA2UDNmT0hKRFRkbFlldC9wUmRVMEtRZGRzU0x6Vzh2UVgwdkZFNXcKZ2hGSnpyT3hHOUJLcnRpV05HdmVWUXRJOGNWZWgxWnJ6NDVCQjlUelNIS3pQUGVQc3FWSVlrdjRMaWVpdVU1RQpLNGdDUlpxdGJ3VHRkK0tLbjFNVWNLY3lOZEllNFNQdVBRRWRpei9HUzdRQkNhTlRRUjNndStLcHQ2djVVMjB3CmhlcS91czVoY3g4bHlPeVBDNmlyQThwd2Z3V3VaM2ZZaExzcDJVRm83aG9rWFArN1A5eHp4OGRxMFNNYzBIK3AKODhnSDkzK0paTHFzd0lZNEpDMVZ0THNYQ1g0SU1YZXBQSU9rbzMyVlVMSWZhWVlDMS9HTjRGaXJYWDFvSGlxOQpLVFU3alFsaHUxbm8reTI1UWRWMWFuY1U3UHdCam5FYlRjZ2FEN1ZLanVRckhSS2hidEFjR21kSTUrWnZJYXYvCmcybHd3VXk4K3hqbm9vdlVUTk5nUk1hZEVIWk8xTCt5UFM4OWlYZUcvdU43M05HYlk0TkljU2FaQ1RsTVFZK3kKVmlBMkY5V21xUDJYWUtIbG5QWC9TbnFjaTdqNWRyMTdUTGtjZTBqZFI4b2hKRG5LU0dzMUxNVFlsMmVyZ1R6RgpHSVVvbmlwMEtzMys3SXRSYnNkTExWM2IrVDVGNGZpRU8rNXdYVitjREFVNDMzRS9RR2JOcVFyeDNIanhLSVdYCjAyc2tvUmZVdVpsMlVScXlLay9lNVhrQ0F3RUFBUT09Ci0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQo=</data>
-            <key>public-key-size</key>
-            <integer>4096</integer>
-            <key>signature-by</key>
-            <string>Rain Xelelo</string>
-          </dict>
-          </plist>" > masterdir-x86_64/var/db/xbps/keys/f9:75:69:31:bd:ee:dd:5e:d7:48:97:7f:4b:f1:0f:72.plist
-          sudo -Eu builder xbps-install -r masterdir-x86_64 --repo=https://rxelelo.github.io/noctalia-void-repo -S jq curl noctalia-qs -y
+          sudo -Eu builder xbps-install -r masterdir-x86_64 -S jq curl -y
 
       - name: Build -git packages
         run: |
@@ -82,33 +72,33 @@ jobs:
           echo "=> Built packages:"
           cat /tmp/latest.list
 
-      - name: Sign and index repo
+      - name: Clone Codeberg pages repo
         run: |
-          echo "${{ secrets.XBPS_PRIVATE_KEY }}" > /tmp/privkey.pem
-          openssl rsa -in /tmp/privkey.pem -out /tmp/privkey_rsa.pem
-          xbps-rindex --sign-pkg --signedby "Rain Xelelo" \
-            --privkey /tmp/privkey_rsa.pem void-packages/hostdir/binpkgs/*.xbps
-          xbps-rindex -a void-packages/hostdir/binpkgs/*.xbps
-          xbps-rindex --sign --signedby "Rain Xelelo" \
-            --privkey /tmp/privkey_rsa.pem void-packages/hostdir/binpkgs
-          rm /tmp/privkey.pem /tmp/privkey_rsa.pem
-          mkdir -p $GITHUB_WORKSPACE/repo
-          cp void-packages/hostdir/binpkgs/* $GITHUB_WORKSPACE/repo/
+          # Try to clone pages branch directly
+          if git clone --depth=1 --branch pages \
+            https://oauth2:${{ secrets.CODEBERG_TOKEN }}@codeberg.org/${{ secrets.CODEBERG_USER }}/${{ secrets.CODEBERG_REPO }}.git \
+            /tmp/codeberg-repo; then
+            echo "=> Cloned pages branch successfully"
+          else
+            echo "=> pages branch clone failed, initializing fresh"
+            mkdir -p /tmp/codeberg-repo
+            cd /tmp/codeberg-repo
+            git init
+            git remote add origin https://oauth2:${{ secrets.CODEBERG_TOKEN }}@codeberg.org/${{ secrets.CODEBERG_USER }}/${{ secrets.CODEBERG_REPO }}.git
+            git checkout --orphan pages
+          fi
 
-      - name: Merge with existing repo and clean old versions
+      - name: Merge new packages into repo
         run: |
-          REPO_DIR="/__w/noctalia-void-repo/noctalia-void-repo/repo"
-          mkdir -p $REPO_DIR
+          REPO_DIR=/tmp/codeberg-repo
 
-          # Fetch existing gh-pages packages
-          git fetch origin gh-pages 2>/dev/null || true
-          mkdir -p /tmp/existing-repo
-          git --work-tree=/tmp/existing-repo checkout origin/gh-pages -- . 2>/dev/null || true
-          cp /tmp/existing-repo/*.xbps $REPO_DIR/ 2>/dev/null || true
-          cp /tmp/existing-repo/*.sig2 $REPO_DIR/ 2>/dev/null || true
+          # Copy newly built packages
+          cp void-packages/hostdir/binpkgs/*.xbps $REPO_DIR/
+          cp void-packages/hostdir/binpkgs/*.sig2 $REPO_DIR/ 2>/dev/null || true
 
-          # Remove old versions of anything we just built
           cd $REPO_DIR
+
+          # Remove old versions of newly built packages
           while read newly_built; do
             pkg_base=$(echo "$newly_built" | sed 's/-[0-9].*//')
             echo "=> Cleaning old versions of: $pkg_base"
@@ -119,17 +109,70 @@ jobs:
             done
           done < /tmp/latest.list
 
-          # Re-index
+          echo "=> Final package count: $(ls *.xbps 2>/dev/null | wc -l)"
+
+      - name: Sign and re-index repo
+        run: |
           echo "${{ secrets.XBPS_PRIVATE_KEY }}" > /tmp/privkey.pem
           openssl rsa -in /tmp/privkey.pem -out /tmp/privkey_rsa.pem
+
+          cd /tmp/codeberg-repo
+          rm *.xbps.sig2
+          xbps-rindex --sign-pkg --signedby "Rain Xelelo" \
+            --privkey /tmp/privkey_rsa.pem *.xbps
           xbps-rindex -a *.xbps
           xbps-rindex --sign --signedby "Rain Xelelo" \
             --privkey /tmp/privkey_rsa.pem .
+
           rm /tmp/privkey.pem /tmp/privkey_rsa.pem
 
-      - name: Publish to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./repo
-          keep_files: false
+      - name: Generate index.html
+        run: |
+          REPO_DIR=/tmp/codeberg-repo
+          cat > "$REPO_DIR/index.html" << 'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <title>void-repo</title>
+            <style>
+              body { font-family: monospace; background: #fff; color: #000; margin: 20px; }
+              h1 { font-size: 1.2em; }
+              hr { border: 1px solid #000; }
+              table { width: 100%; border-collapse: collapse; }
+              td { padding: 2px 10px; white-space: nowrap; }
+              td:last-child { text-align: right; }
+              a { color: #00e; }
+              a:visited { color: #551a8b; }
+            </style>
+          </head>
+          <body>
+          <h1>Index /</h1>
+          <hr>
+          <table>
+            <tr><td><a href="../">../</a></td><td></td><td>-</td></tr>
+          EOF
+
+          for f in "$REPO_DIR"/*; do
+            [ -f "$f" ] || continue
+            fname=$(basename "$f")
+            fdate=$(date -r "$f" "+%d-%b-%Y %H:%M")
+            fsize=$(stat -c%s "$f")
+            echo "  <tr><td><a href=\"$fname\">$fname</a></td><td>$fdate</td><td>$fsize</td></tr>" >> "$REPO_DIR/index.html"
+          done
+
+          cat >> "$REPO_DIR/index.html" << 'EOF'
+          </table>
+          <hr>
+          </body>
+          </html>
+          EOF
+
+      - name: Push to Codeberg pages branch
+        run: |
+          cd /tmp/codeberg-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "repo: update packages $(date '+%Y-%m-%d %H:%M:%S')" || echo "Nothing to commit"
+          git push --force origin pages
